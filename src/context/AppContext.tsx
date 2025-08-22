@@ -2,16 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { API_URL } from '@/lib/api';
+import { setExternalTokenGetter } from '@/lib/loopApi'; // ← NEW
 
 // --- TYPE DEFINITIONS ---
-// These types can be shared across components
 export type ChatSession = {
   id: number;
   title: string;
   created_at: string;
 };
 
-// Define the shape of the context's value
 interface IAppContext {
   authToken: string | null;
   sessions: ChatSession[];
@@ -23,40 +22,42 @@ interface IAppContext {
   deleteSession: (sessionId: number) => Promise<void>;
 }
 
-// Create the context
 const AppContext = createContext<IAppContext | null>(null);
 
-// Create the Provider component
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
 
-  // Check for token in localStorage on initial load
+  // Initial token load
   useEffect(() => {
-    const token = localStorage.getItem('looptracker_auth_token');
-    if (token) {
-      setAuthToken(token);
-    }
+    try {
+      const token = localStorage.getItem('looptracker_auth_token');
+      if (token) setAuthToken(token);
+    } catch {}
   }, []);
 
-  // Fetch sessions whenever the auth token changes
+  // Bridge authToken into loopApi so /loops* calls carry Authorization automatically
+  useEffect(() => {
+    setExternalTokenGetter(() => authToken);
+  }, [authToken]);
+
   const refreshSessions = useCallback(async () => {
     if (!authToken) return;
     try {
       const response = await fetch(`${API_URL}/chats`, {
-        headers: { 'Authorization': `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       if (response.ok) {
         setSessions(await response.json());
       } else {
-        // If token is invalid, log out
         if (response.status === 401) {
+          // token invalid/expired → clear state
           logout();
         }
       }
     } catch (error) {
-      console.error("Failed to fetch chat sessions:", error);
+      console.error('Failed to fetch chat sessions:', error);
     }
   }, [authToken]);
 
@@ -64,26 +65,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     refreshSessions();
   }, [refreshSessions]);
 
-  // --- Context Functions ---
-
   const login = async (email: string, password: string) => {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ username: email, password: password }),
+      body: new URLSearchParams({ username: email, password }),
     });
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Login failed.');
+      let detail = 'Login failed.';
+      try {
+        const errorData = await response.json();
+        detail = errorData.detail || detail;
+      } catch {}
+      throw new Error(detail);
     }
     const data = await response.json();
-    const token = data.access_token;
+    const token = data.access_token as string;
     localStorage.setItem('looptracker_auth_token', token);
     setAuthToken(token);
+    // refreshSessions will run via effect; no need to call here
   };
 
   const logout = () => {
-    localStorage.removeItem('looptracker_auth_token');
+    try {
+      localStorage.removeItem('looptracker_auth_token');
+    } catch {}
     setAuthToken(null);
     setSessions([]);
     setActiveSessionId(null);
@@ -94,20 +100,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await fetch(`${API_URL}/chats/${sessionIdToDelete}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       if (response.ok) {
-        setSessions(prev => prev.filter(session => session.id !== sessionIdToDelete));
+        setSessions((prev) => prev.filter((session) => session.id !== sessionIdToDelete));
         if (activeSessionId === sessionIdToDelete) {
           setActiveSessionId(null);
         }
       }
     } catch (error) {
-      console.error("Error deleting session:", error);
+      console.error('Error deleting session:', error);
     }
   };
 
-  // The value provided to consuming components
   const value = {
     authToken,
     sessions,
@@ -122,7 +127,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-// Create a custom hook for easy consumption of the context
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {

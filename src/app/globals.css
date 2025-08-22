@@ -1,17 +1,14 @@
+/* src/app/globals.css */
+/* Tailwind v4 style: only @import, no @tailwind/@apply */
 @import "tailwindcss";
 
+/* ---- Color tokens ---- */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Dark scheme override */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +16,96 @@
   }
 }
 
+/* Layout baseline */
+html, body {
+  height: 100%;
+}
 body {
-  background: var(--background);
+  min-height: 100vh;         /* fallback */
+  min-height: 100dvh;        /* prevents iOS/Chrome mobile cutoffs */
+}
+
+/* App baseline */
+body {
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,0.18), transparent 60%),
+    radial-gradient(1000px 500px at 110% 10%, rgba(139,92,246,0.18), transparent 60%),
+    linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.25) 100%),
+    var(--background);
+  background-attachment: fixed; /* make the field extend while scrolling */
+  font-family: var(--font-geist-sans, ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji");
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Safe-area helpers for footers/composers */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+.mb-safe { margin-bottom: env(safe-area-inset-bottom, 0); }
+
+/* App shell helpers */
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0; /* enables inner scroll areas to size properly */
+}
+
+/* ---- Markdown / prose tuning ---- */
+.prose {
+  line-height: 1.6;
+}
+.prose p { margin: 0.5rem 0; }
+.prose ul, .prose ol { margin: 0.5rem 0 0.75rem; padding-left: 1.25rem; }
+.prose li { margin: 0.25rem 0; }
+.prose h1, .prose h2, .prose h3, .prose h4 { margin: 0.75rem 0 0.5rem; line-height: 1.25; }
+.prose pre {
+  background: #1f2937;     /* gray-800 */
+  color: #e5e7eb;          /* gray-200 */
+  border-radius: 0.75rem;  /* a bit softer */
+  padding: 0.75rem;        /* p-3 */
+  overflow: auto;
+}
+.prose code { color: #e5e7eb; }
+.prose a { color: #60a5fa; text-decoration: underline; }
+
+/* Nicer <kbd> badges */
+kbd {
+  font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size: 11px;
+  padding: 0 .35rem;
+  border-radius: .375rem;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+}
+
+/* Thin scrollbar */
+.scrollbar-thin { scrollbar-width: thin; }
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 9999px;
+}
+
+/* Reusable glass panel */
+.glass {
+  background: color-mix(in oklab, white 6%, transparent);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  box-shadow:
+    0 10px 40px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* Overscroll fade for long lists (apply to scroll container) */
+.scroll-fade {
+  position: relative;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
 }

@@ -2,64 +2,161 @@
 
 import { useAppContext } from '@/context/AppContext';
 
-// MODIFIED: Added 'progress' to the type
 interface SidebarProps {
-    activeView: string;
-    setActiveView: (view: 'chat' | 'knowledge' | 'progress') => void;
+  activeView: 'chat' | 'knowledge' | 'progress' | 'loops';
+  setActiveView: (view: 'chat' | 'knowledge' | 'progress' | 'loops') => void;
 }
 
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const { sessions, activeSessionId, setActiveSessionId, logout, deleteSession } = useAppContext();
-  
+
   const handleNewChat = () => {
     setActiveSessionId(null);
     setActiveView('chat');
-  }
+  };
 
   const handleSelectSession = (id: number) => {
     setActiveSessionId(id);
-    setActiveView('chat');
-  }
+    setActiveView('chat'); // chat stays mounted; ChatArea reacts to activeSessionId change
+  };
 
   const handleDeleteSession = async (sessionIdToDelete: number, e: React.MouseEvent) => {
-    e.stopPropagation(); 
-    if (window.confirm("Are you sure you want to delete this chat session?")) {
-        await deleteSession(sessionIdToDelete);
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this chat session?')) {
+      await deleteSession(sessionIdToDelete);
     }
   };
 
+  const NavButton = ({
+    label,
+    icon,
+    active,
+    onClick,
+  }: {
+    label: string;
+    icon: React.ReactNode;
+    active: boolean;
+    onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={`group flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+        active
+          ? 'bg-white/10 border border-white/10 text-white shadow-sm'
+          : 'text-gray-300 hover:text-white hover:bg-white/5 border border-transparent'
+      }`}
+    >
+      <span
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-md ${
+          active ? 'bg-white/10' : 'bg-white/5 group-hover:bg-white/10'
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
+    </button>
+  );
+
   return (
-    <div className="w-64 bg-gray-800 p-4 flex flex-col border-r border-gray-700">
-      <h1 className="text-xl font-bold mb-4">Looptracker OS</h1>
-      <button onClick={handleNewChat} className="w-full mb-2 px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700">
-        + New Chat
-      </button>
+    <aside className="w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-white/5 to-transparent px-4 py-4 backdrop-blur-xl">
+      {/* Brand */}
+      <div className="mb-4 flex items-center gap-2 px-1">
+        <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500" />
+        <div className="font-semibold tracking-wide">Looptracker OS</div>
+      </div>
 
-      {/* NEW BUTTON FOR PROGRESS */}
-      <button onClick={() => setActiveView('progress')} className={`w-full mb-2 px-4 py-2 font-bold rounded-md ${activeView === 'progress' ? 'bg-gray-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-        Progress
-      </button>
+      {/* Primary actions */}
+      <div className="space-y-2">
+        <button
+          onClick={handleNewChat}
+          className="w-full rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 px-3 py-2 text-sm font-medium text-black shadow-md shadow-violet-500/20 transition hover:shadow-lg hover:shadow-violet-500/30"
+        >
+          + New Chat
+        </button>
 
-      <button onClick={() => setActiveView('knowledge')} className={`w-full mb-4 px-4 py-2 font-bold rounded-md ${activeView === 'knowledge' ? 'bg-gray-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-        Knowledge Base
-      </button>
+        <NavButton
+          label="Open Loops"
+          active={activeView === 'loops'}
+          onClick={() => setActiveView('loops')}
+          icon={
+            // arrows-path-rounded-square
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+              <path d="M7 7h6a4 4 0 1 1 0 8H9v3l-4-4 4-4v3h4a2 2 0 1 0 0-4H7V7Zm10 10h-6a4 4 0 1 1 0-8h4V6l4 4-4 4v-3h-4a2 2 0 1 0 0 4h6v2Z" />
+            </svg>
+          }
+        />
 
-      <div className="flex-1 overflow-y-auto">
-        <h2 className="text-sm font-semibold text-gray-400 mb-2 px-2">History</h2>
-        <div className="space-y-1">
-          {sessions.map(session => (
-            <div key={session.id} onClick={() => handleSelectSession(session.id)} className={`group flex justify-between items-center p-2 rounded-md cursor-pointer ${activeSessionId === session.id ? 'bg-gray-600' : 'hover:bg-gray-700'}`}>
-              <p className="truncate text-sm">{session.title || `Chat from ${new Date(session.created_at).toLocaleDateString()}`}</p>
-              <button onClick={(e) => handleDeleteSession(session.id, e)} className="text-gray-500 hover:text-red-500">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+        <NavButton
+          label="Progress"
+          active={activeView === 'progress'}
+          onClick={() => setActiveView('progress')}
+          icon={
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+              <path d="M3 13h3v8H3v-8Zm5-6h3v14H8V7Zm5 3h3v11h-3V10Zm5-6h3v17h-3V4Z" />
+            </svg>
+          }
+        />
+
+        <NavButton
+          label="Knowledge Base"
+          active={activeView === 'knowledge'}
+          onClick={() => setActiveView('knowledge')}
+          icon={
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+              <path d="M4 6a2 2 0 0 1 2-2h12v14H6a2 2 0 0 1-2-2V6Zm2 0v10h10V6H6Zm12 12H6v2h12v-2Z" />
+            </svg>
+          }
+        />
+      </div>
+
+      {/* History */}
+      <div className="mt-6">
+        <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-gray-400">History</div>
+        <div className="max-h-[42vh] space-y-1 overflow-y-auto pr-1 scrollbar-thin">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              onClick={() => handleSelectSession(session.id)}
+              className={`group flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                activeSessionId === session.id
+                  ? 'bg-white/10 border border-white/10'
+                  : 'hover:bg-white/5 border border-transparent'
+              }`}
+              title={session.title || ''}
+            >
+              <p className="truncate text-gray-200">
+                {session.title || `Chat • ${new Date(session.created_at).toLocaleDateString()}`}
+              </p>
+              <button
+                onClick={(e) => handleDeleteSession(session.id, e)}
+                className="ml-2 shrink-0 rounded-md p-1 text-gray-400 hover:text-red-400 hover:bg-white/5"
+                aria-label="Delete session"
+                title="Delete"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7Zm3-5h6l1 2h4v2H2V4h4l1-2Z" />
+                </svg>
               </button>
             </div>
           ))}
+          {sessions.length === 0 && (
+            <div className="rounded-xl border border-dashed border-white/10 p-3 text-xs text-gray-400">
+              No conversations yet. Start a new chat to begin.
+            </div>
+          )}
         </div>
       </div>
-      <div className="mt-4">
-          <button onClick={logout} className="w-full text-left text-sm text-gray-400 hover:text-white p-2 rounded-md hover:bg-gray-700">Logout</button>
+
+      {/* Footer */}
+      <div className="mt-6 border-t border-white/10 pt-4">
+        <button
+          onClick={logout}
+          className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5 hover:text-white"
+        >
+          Logout
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
