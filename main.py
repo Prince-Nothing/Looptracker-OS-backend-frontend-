@@ -8,7 +8,7 @@ import os
 
 # Internal module imports for application setup
 from database import create_db_and_tables
-from routers import users, chat, files  # add more routers here if/when needed
+from routers import users, chat, files, memory, feedback, diagnostics, loops, triage  # ⬅️ added triage
 
 # --- Environment and App Initialization ---
 load_dotenv(find_dotenv(usecwd=True))
@@ -41,19 +41,20 @@ def on_startup():
 app.include_router(users.router)
 app.include_router(chat.router)
 app.include_router(files.router)
+app.include_router(memory.router)
+app.include_router(feedback.router)
+app.include_router(diagnostics.router)
+app.include_router(loops.router)   # Open Loops
+app.include_router(triage.router)  # Dynamic Triage (SE/ACT/IFS)
 
 # --- Optional: quiet the favicon 404 when you hit the backend in a browser ---
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    # 204 No Content silences the browser's automatic favicon request
     return Response(status_code=204)
 
 # --- Health Endpoint ---
 @app.get("/health", tags=["Default"])
 def health():
-    """
-    Lightweight health check with cache backend detection.
-    """
     cache_backend = "memory"
     redis_url = os.getenv("REDIS_URL")
     info = {"redis_url_set": bool(redis_url)}
@@ -79,12 +80,8 @@ def health():
 # --- Root Endpoint ---
 @app.get("/", tags=["Default"])
 def read_root():
-    """
-    A simple root endpoint to confirm the API is running.
-    """
     return {"message": "Looptracker Backend is running!"}
 
-# --- Uvicorn Server Runner (for direct execution) ---
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -14,6 +14,7 @@ from models import (
     DocumentChunk,
     Feedback,
     InteractionMetric,  # NEW: metrics table
+    TriageDecision,     # NEW: triage table
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -536,3 +537,45 @@ def get_global_metrics_summary(
             "avg": avg_bytes,
         },
     }
+
+
+# -----------------------
+# Triage Decisions (logging)
+# -----------------------
+
+def create_triage_decision(
+    session: Session,
+    *,
+    user_id: int,
+    label: str,
+    confidence: float,
+    rationale: str,
+    prompts: List[str],
+    second_choice: Optional[str] = None,
+    chat_session_id: Optional[int] = None,
+    chat_message_id: Optional[int] = None,
+    distress_0_10: Optional[float] = None,
+    tags: Optional[List[str]] = None,
+    capture_preview: Optional[str] = None,
+    capture_len: Optional[int] = None,
+    capture_sha256: Optional[str] = None,
+) -> TriageDecision:
+    row = TriageDecision(
+        user_id=user_id,
+        chat_session_id=chat_session_id,
+        chat_message_id=chat_message_id,
+        label=label,
+        confidence=confidence,
+        rationale=rationale,
+        prompts=prompts,
+        second_choice=second_choice,
+        distress_0_10=distress_0_10,
+        tags=tags,
+        capture_preview=capture_preview,
+        capture_len=capture_len,
+        capture_sha256=capture_sha256,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row

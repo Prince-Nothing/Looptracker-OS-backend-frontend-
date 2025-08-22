@@ -1,33 +1,38 @@
 # looptracker_backend/database.py
-from sqlmodel import create_engine, Session, SQLModel # Import SQLModel directly here
+from sqlmodel import create_engine, Session, SQLModel
+from sqlalchemy import text
 from dotenv import load_dotenv
 import os
 
-load_dotenv() # Load environment variables from .env
+load_dotenv()  # Load environment variables from .env
 
-# Retrieve the database URL from environment variables
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not found in environment variables. Please set it in your .env file.")
 
-# Create the database engine
 engine = create_engine(DATABASE_URL, echo=True)
 
 def create_db_and_tables():
     """
-    Function to create all tables defined in your SQLModel models.
-    This should be called once when the application starts or for migrations.
+    Create all tables defined in SQLModel models and set useful indexes.
     """
-    # IMPORT YOUR MODELS HERE so SQLModel.metadata.create_all() can discover them.
-    # This import needs to happen inside the function to prevent circular import issues
-    # if models.py were to indirectly import something from database.py.
-    from models import User, ChatSession, ChatMessage
+    # Import models so SQLModel.metadata is populated
+    from models import User, ChatSession, ChatMessage, UserMemory
+    from loop_models import Loop, Habit, HabitEvent
+
     SQLModel.metadata.create_all(engine)
 
+    # Optional: fast JSONB containment on usermemory.properties
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS usermemory_props_gin ON usermemory USING GIN ((properties::jsonb));")
+            )
+            conn.commit()
+    except Exception as _e:
+        # Index creation is best-effort; log if you prefer
+        pass
+
 def get_session():
-    """
-    Dependency that provides a database session.
-    This will be used by FastAPI endpoints to get a database connection.
-    """
     with Session(engine) as session:
         yield session

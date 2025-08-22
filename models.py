@@ -142,6 +142,30 @@ class InteractionMetric(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
 
+# --- NEW: TriageDecision (logs SE/ACT/IFS routing, privacy-safe) ---
+class TriageDecision(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    chat_session_id: Optional[int] = Field(default=None, foreign_key="chatsession.id", index=True)
+    chat_message_id: Optional[int] = Field(default=None, foreign_key="chatmessage.id", index=True)
+
+    label: str = Field(index=True)  # "SE" | "ACT" | "IFS"
+    confidence: float
+    second_choice: Optional[str] = None
+    rationale: str
+
+    prompts: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    distress_0_10: Optional[float] = None
+
+    # Privacy-safe capture info (no full text)
+    capture_preview: Optional[str] = Field(default=None, max_length=256)
+    capture_len: Optional[int] = None
+    capture_sha256: Optional[str] = Field(default=None, max_length=64)
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 # --- Pydantic Models (for API responses, not database tables) ---
 class DiagnosticDataPoint(BaseModel):
     timestamp: datetime

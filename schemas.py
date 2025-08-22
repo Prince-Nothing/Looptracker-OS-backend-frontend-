@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from pydantic.config import ConfigDict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 from enum import Enum
 
@@ -140,3 +140,25 @@ class InteractionMetricResponse(BaseModel):
     bytes_streamed: Optional[int] = None
     extra: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
+
+
+# ===============================
+# Dynamic Triage Schemas (SE / ACT / IFS)
+# ===============================
+
+TriageLabel = Literal["SE", "ACT", "IFS"]
+
+class TriageRequest(BaseModel):
+    capture_text: str = Field(..., min_length=1)
+    distress_0_10: Optional[float] = Field(None, ge=0, le=10)
+    tags: Optional[List[str]] = None
+    # Link triage to a session/message when available (optional)
+    chat_session_id: Optional[int] = None
+    chat_message_id: Optional[int] = None
+
+class TriageResponse(BaseModel):
+    label: TriageLabel
+    confidence: float = Field(..., ge=0, le=1)
+    rationale: str
+    prompts: List[str]
+    second_choice: Optional[TriageLabel] = None
